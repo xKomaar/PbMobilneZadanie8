@@ -124,8 +124,18 @@ public class MainActivity extends AppCompatActivity {
         private TextView bookTitleTextView;
         private TextView bookAuthorTextView;
         private Book book;
+        boolean swiped = false;
         public BookHolder(LayoutInflater inflater, ViewGroup parent) {
             super(inflater.inflate(R.layout.book_list_item, parent, false));
+
+            itemView.setOnTouchListener(new OnSwipeTouchListener(MainActivity.this) {
+                @Override
+                public void onSwipeRight() {
+                    Snackbar.make(findViewById(R.id.coordinator_layout), getString(R.string.book_archived),
+                            Snackbar.LENGTH_LONG).show();
+                    swiped = true;
+                }
+            });
 
             itemView.setOnClickListener(view -> {
                 MainActivity.this.editedBook = this.book;
@@ -136,15 +146,12 @@ public class MainActivity extends AppCompatActivity {
             });
 
             itemView.setOnLongClickListener(view -> {
-                MainActivity.this.bookViewModel.delete(this.book);
-                return true;
-            });
-
-            itemView.setOnTouchListener(new OnSwipeTouchListener(MainActivity.this) {
-                public void onSwipeRight() {
-                    Snackbar.make(findViewById(R.id.coordinator_layout), getString(R.string.book_archived),
-                            Snackbar.LENGTH_LONG).show();
+                if(!swiped) {
+                    MainActivity.this.bookViewModel.delete(this.book);
+                } else {
+                    swiped = false;
                 }
+                return true;
             });
 
             bookTitleTextView = itemView.findViewById(R.id.book_title);
@@ -161,66 +168,43 @@ public class MainActivity extends AppCompatActivity {
 
             private final GestureDetector gestureDetector;
 
-            public OnSwipeTouchListener (Context ctx){
-                gestureDetector = new GestureDetector(ctx, new GestureListener());
+            public OnSwipeTouchListener(Context context) {
+                gestureDetector = new GestureDetector(context, new GestureListener());
             }
 
-            @Override
+            public void onSwipeLeft() {
+            }
+
+            public void onSwipeRight() {
+            }
+
             public boolean onTouch(View v, MotionEvent event) {
                 return gestureDetector.onTouchEvent(event);
             }
 
             private final class GestureListener extends GestureDetector.SimpleOnGestureListener {
 
-                private static final int SWIPE_THRESHOLD = 100;
+                private static final int SWIPE_DISTANCE_THRESHOLD = 100;
                 private static final int SWIPE_VELOCITY_THRESHOLD = 100;
 
                 @Override
                 public boolean onDown(MotionEvent e) {
-                    return true;
+                    return false;
                 }
 
                 @Override
                 public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                    boolean result = false;
-                    try {
-                        float diffY = e2.getY() - e1.getY();
-                        float diffX = e2.getX() - e1.getX();
-                        if (Math.abs(diffX) > Math.abs(diffY)) {
-                            if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
-                                if (diffX > 0) {
-                                    onSwipeRight();
-                                } else {
-                                    onSwipeLeft();
-                                }
-                                result = true;
-                            }
-                        }
-                        else if (Math.abs(diffY) > SWIPE_THRESHOLD && Math.abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
-                            if (diffY > 0) {
-                                onSwipeBottom();
-                            } else {
-                                onSwipeTop();
-                            }
-                            result = true;
-                        }
-                    } catch (Exception exception) {
-                        exception.printStackTrace();
+                    float distanceX = e2.getX() - e1.getX();
+                    float distanceY = e2.getY() - e1.getY();
+                    if (Math.abs(distanceX) > Math.abs(distanceY) && Math.abs(distanceX) > SWIPE_DISTANCE_THRESHOLD && Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                        if (distanceX > 0)
+                            onSwipeRight();
+                        else
+                            onSwipeLeft();
+                        return true;
                     }
-                    return result;
+                    return false;
                 }
-            }
-
-            public void onSwipeRight() {
-            }
-
-            public void onSwipeLeft() {
-            }
-
-            public void onSwipeTop() {
-            }
-
-            public void onSwipeBottom() {
             }
         }
     }
